@@ -20,6 +20,11 @@ export const routes = [
         handler: (req,res) => {
             const { title, description } = req.body;
 
+            if(!title || !description){
+                return res.writeHead(400).end(JSON.stringify({error:'Title and description are required'}));
+            }
+
+
             tasks.push({
                 id:randomUUID(),
                 title,
@@ -37,6 +42,11 @@ export const routes = [
         path: buildRoutePath('/tasks/:id'),
         handler: (req,res) => {
             const { ...data } =  req.body;
+
+            const {title, description} = data;
+            if(!title || !description){
+                return res.writeHead(400).end(JSON.stringify({error:'Title and description are required'}));
+            }
 
             const { id } = req.params;
             const findTask = tasks.findIndex(task=>task.id===id)
@@ -66,6 +76,24 @@ export const routes = [
             return res.writeHead(204).end()
         }
     },
+    {
+        method: 'PATCH',
+        path: buildRoutePath('/tasks/:id/complete'),
+        handler: (req,res) => {
+
+            const { id } = req.params;
+
+            const findTask = tasks.findIndex(task=>task.id===id)
+
+            if(findTask===-1){
+                return res.writeHead(404).end(JSON.stringify({error:'Register not found'}));
+            }
+
+            Object.assign(tasks[findTask], { completed_at:true })
+            
+            return res.writeHead(204).end()
+        }
+    }
 
 
 ]
