@@ -4,8 +4,6 @@ import { Database } from './database.js';
 
 const database = new Database()
 
-const tasks_ = [];
-
 export const routes = [
     
     {
