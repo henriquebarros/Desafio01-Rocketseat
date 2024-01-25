@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { buildRoutePath } from './utils/build-route-path.js';
+import { Database } from './database.js';
 
+const database = new Database()
 
-const tasks = [];
+const tasks_ = [];
 
 export const routes = [
     
@@ -10,7 +12,12 @@ export const routes = [
         method: 'GET',
         path: buildRoutePath('/tasks'),
         handler: (req,res) => {
-            
+            const { search } = req.query
+
+            const tasks = database.select('tasks', search ? {
+                title: search,
+                description: search
+            }:null)
             return res.end(JSON.stringify(tasks))
         }
     },
@@ -25,7 +32,7 @@ export const routes = [
             }
 
 
-            tasks.push({
+            const task = ({
                 id:randomUUID(),
                 title,
                 description,
@@ -33,6 +40,8 @@ export const routes = [
                 created_at: new Date(),
                 updated_at: new Date(),
             })
+
+            database.insert('tasks',task)
     
             return res.writeHead(201).end();
         }
@@ -40,7 +49,7 @@ export const routes = [
     {
         method: 'PUT',
         path: buildRoutePath('/tasks/:id'),
-        handler: (req,res) => {
+        handler: async (req,res) => {
             const { ...data } =  req.body;
 
             const {title, description} = data;
@@ -49,13 +58,19 @@ export const routes = [
             }
 
             const { id } = req.params;
-            const findTask = tasks.findIndex(task=>task.id===id)
 
-            if(findTask===-1){
+            const [task] = await database.select('tasks', {
+                id,
+            })
+
+            if(!task){
                 return res.writeHead(404).end(JSON.stringify({error:'Register not found'}));
             }
 
-            Object.assign(tasks[findTask], { ...data, updated_at: new Date() })
+            Object.assign(task, { ...data, updated_at: new Date() })
+            database.update('tasks', id, task )
+
+            
 
             return res.writeHead(204).end()
         }
@@ -63,15 +78,19 @@ export const routes = [
     {
         method: 'DELETE',
         path: buildRoutePath('/tasks/:id'),
-        handler: (req,res) => {
+        handler: async (req,res) => {
             const { id } = req.params;
 
-            const findTask = tasks.findIndex(task=>task.id===id)
-            if(findTask===-1){
+
+            const [task] = await database.select('tasks', {
+                id,
+            })
+
+            if(!task){
                 return res.writeHead(404).end(JSON.stringify({error:'Register not found'}));
             }
 
-            tasks.splice(findTask,1)
+            database.delete('tasks',id)
 
             return res.writeHead(204).end()
         }
@@ -79,17 +98,19 @@ export const routes = [
     {
         method: 'PATCH',
         path: buildRoutePath('/tasks/:id/complete'),
-        handler: (req,res) => {
+        handler: async (req,res) => {
 
             const { id } = req.params;
+            const [task] = await database.select('tasks', {
+                id,
+            })
 
-            const findTask = tasks.findIndex(task=>task.id===id)
-
-            if(findTask===-1){
+            if(!task){
                 return res.writeHead(404).end(JSON.stringify({error:'Register not found'}));
             }
 
-            Object.assign(tasks[findTask], { completed_at:true })
+            Object.assign(task, { completed_at:true, updated_at: new Date() })
+            database.update('tasks', id, task )
             
             return res.writeHead(204).end()
         }
